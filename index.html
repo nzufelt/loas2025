@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tiered Cognitive Processes — Interactive Explorer</title>
+  <style>
+    :root{
+      --low:#2d6cdf;        /* blue */
+      --mid:#1aa36f;        /* green */
+      --high:#f59e0b;       /* amber */
+      --higher:#8b5cf6;     /* violet */
+      --text:#111827;       /* gray-900 */
+      --muted:#6b7280;      /* gray-500 */
+      --bg:#f9fafb;         /* gray-50 */
+      --card:#ffffff;       /* white */
+      --border:#e5e7eb;     /* gray-200 */
+      --focus: #11182722;
+    }
+    *{box-sizing:border-box}
+    body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; color:var(--text); background:var(--bg); }
+    header{ position:sticky; top:0; z-index:5; background:linear-gradient(180deg, #fff, rgba(255,255,255,.92)); border-bottom:1px solid var(--border); padding:12px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+    header h1{font-size:20px; margin:0; letter-spacing:.2px}
+    .legend{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .pill{display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border); border-radius:999px; padding:6px 10px; background:var(--card); font-size:13px}
+    .dot{width:10px; height:10px; border-radius:50%}
+    .dot.low{background:var(--low)}
+    .dot.mid{background:var(--mid)}
+    .dot.high{background:var(--high)}
+    .dot.higher{background:var(--higher)}
+
+    .container{max-width:900px; margin:0 auto; padding:16px}
+
+    .controls{display:flex; gap:10px; align-items:center; margin:6px 0 16px; flex-wrap:wrap}
+    .controls input{flex:1; min-width:220px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#fff}
+    .tierToggle{display:flex; gap:8px; flex-wrap:wrap}
+    .tierToggle button{padding:6px 10px; border:1px solid var(--border); background:#fff; border-radius:999px; cursor:pointer; font-size:12px}
+    .tierToggle button.active{outline:2px solid var(--focus)}
+
+    .section{margin-top:18px}
+    .section h2{font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:.12em; margin:10px 4px}
+
+    /* Item cards */
+    .card{border:1px solid var(--border); background:var(--card); border-radius:14px; margin:8px 0; overflow:hidden}
+    .head{display:flex; align-items:center; gap:10px; padding:12px; cursor:pointer}
+    .head:hover{background:#fafafa}
+    .badge{font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; color:white}
+    .badge.low{background:var(--low)}
+    .badge.mid{background:var(--mid)}
+    .badge.high{background:var(--high); color:#1f2937}
+    .badge.higher{background:var(--higher)}
+    .name{font-weight:600}
+
+    .details{display:none; border-top:1px solid var(--border); padding:12px}
+    .details.open{display:block}
+    .grid{display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px}
+    @media (max-width: 720px){ .grid{grid-template-columns:1fr} }
+    .cell{border:1px solid var(--border); border-radius:12px; padding:12px}
+    .cell h4{margin:0 0 8px; font-size:14px}
+    .muted{color:var(--muted)}
+
+    .row{display:flex; justify-content:space-between; align-items:center; gap:10px}
+    .hideBtn{border:1px solid var(--border); background:#fff; border-radius:999px; padding:6px 10px; font-size:12px; cursor:pointer}
+
+    footer{max-width:900px; margin:12px auto 40px; padding:0 16px; color:var(--muted); font-size:13px}
+    .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Tiered Cognitive Processes — Interactive Explorer</h1>
+    <div class="legend" aria-label="Legend for tiers">
+      <span class="pill"><span class="dot low" aria-hidden="true"></span> Low-level</span>
+      <span class="pill"><span class="dot mid" aria-hidden="true"></span> Mid-level</span>
+      <span class="pill"><span class="dot high" aria-hidden="true"></span> High-level</span>
+      <span class="pill"><span class="dot higher" aria-hidden="true"></span> Higher‑order subset</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="controls">
+      <label for="search" class="sr-only">Search processes</label>
+      <input id="search" placeholder="Search… (e.g., memory, creativity)" />
+      <div class="tierToggle" role="group" aria-label="Filter by tier">
+        <button data-filter="all" class="active">All</button>
+        <button data-filter="low"><span class="dot low"></span></button>
+        <button data-filter="mid"><span class="dot mid"></span></button>
+        <button data-filter="high"><span class="dot high"></span></button>
+        <button data-filter="higher"><span class="dot higher"></span></button>
+      </div>
+    </div>
+
+    <div id="sections"></div>
+  </div>
+
+  <footer>
+    <p><strong>About this map.</strong> This organizer synthesizes widely cited frameworks (perception/attention hierarchies; executive‑function literature; dual‑process views of reasoning/decision; Global Workspace accounts of conscious access; predictive‑processing accounts of perception/action) and standard cognitive‑psychology taxonomies. Tiers are a teaching aid: “higher‑order” is shown as a <em>subset</em> of high‑level (maximally integrative, cross‑domain).</p>
+  </footer>
+
+  <script>
+    // --- Data (unchanged from earlier version) ---
+    const data = [
+      { id:"perception", name:"Perception", tier:"low", definition:"Interpreting sensory input (vision, audition, touch, smell, taste, proprioception, balance) into usable representations.", examples:["Reading a street sign","Locating a voice in a noisy room","Keeping balance while walking"], metaphor:"Camera + preprocessing pipeline that sharpens, denoises, and edges before anything ‘cognitive’ happens.", models:["Receptive fields; hierarchical visual cortex (V1→IT)","Predictive processing (top‑down expectations)"] },
+      { id:"attention", name:"Attention", tier:"low", definition:"Selecting and prioritizing information for limited processing resources (orienting, alerting, basic filtering).", examples:["Turning toward a sudden sound","Noticing your name in background chatter","Staying alert while driving"], metaphor:"A movable spotlight that brightens one patch of the scene while dimming others.", models:["Biased competition; dorsal/ventral attention networks","Salience maps"] },
+      { id:"memory", name:"Memory", tier:"low", definition:"Encoding, storing, and retrieving information; includes sensory traces and short‑term buffers.", examples:["Remembering a phone number long enough to dial","Echo of a melody after it stops"], metaphor:"Scratchpads of different sizes and decay rates.", models:["Iconic/echoic stores; short‑term span","Synaptic plasticity (Hebbian/Spike‑Timing)"] },
+      { id:"learning", name:"Learning", tier:"low", definition:"Lasting change in knowledge or behavior from experience; includes habituation, sensitization, and basic associative learning.", examples:["Dog salivating to a bell","Avoiding a road after a bad experience"], metaphor:"Updating weights in a network as outcomes roll in.", models:["Classical/operant conditioning","Rescorla–Wagner; reward‑prediction error"] },
+
+      { id:"reasoning", name:"Reasoning", tier:"mid", definition:"Drawing inferences (deductive, inductive, analogical, causal) from premises or evidence.", examples:["Proving a geometry claim","Inferring why a device failed"], metaphor:"Rule engines and analogy bridges that connect islands of facts.", models:["Dual‑process theories (intuitive vs. analytic)","Structure‑mapping for analogy"] },
+      { id:"decision", name:"Decision‑Making", tier:"mid", definition:"Selecting actions under uncertainty by evaluating options, utilities, risks, and time.", examples:["Choosing a route that trades time for tolls","Investing vs. saving"], metaphor:"A balance scale that weighs expected payoffs against costs and delays.", models:["Expected utility / prospect theory","Drift‑diffusion models"] },
+      { id:"problem", name:"Problem‑Solving", tier:"mid", definition:"Transforming a current state into a desired one via strategies (heuristics, algorithms) and subgoals.", examples:["Debugging a program","Solving a logic puzzle"], metaphor:"Navigating a maze by setting landmarks and backtracking when needed.", models:["Search in problem spaces; means–ends analysis","Working‑memory constraints"] },
+      { id:"language", name:"Language & Communication", tier:"mid", definition:"Producing and understanding symbols (phonology, syntax, semantics, pragmatics) to share meaning.", examples:["Parsing a complex sentence","Reading sarcasm from tone"], metaphor:"A compression/decompression codec tuned to humans.", models:["Dual‑stream language pathways","Predictive coding in language"] },
+      { id:"emotion", name:"Emotion", tier:"mid", definition:"Coordinated physiological, experiential, and expressive responses that bias attention, memory, and action.", examples:["Fear sharpening attention","Joy broadening thought–action repertoires"], metaphor:"A priority re‑router that boosts or dampens channels.", models:["Limbic/prefrontal circuits; appraisal theories","Affect‑as‑information"] },
+
+      { id:"exec", name:"Executive Functions", tier:"high", definition:"Control processes that regulate thought and action: planning, inhibition, updating, shifting, monitoring.", examples:["Holding rules in mind while suppressing a habit","Re‑planning when constraints change"], metaphor:"A project manager allocating limited staff (attention, memory) across tasks.", models:["Prefrontal–basal ganglia loops","Central executive in working memory"] },
+      { id:"conscious", name:"Consciousness & Self‑Awareness", tier:"high", definition:"Global availability of information for report, control, and reflection; awareness of self and context.", examples:["Notice a stimulus and can describe it","Recognize a bias in your own judgment"], metaphor:"A central stage where selected information is broadcast to the whole theater.", models:["Global Workspace Theory","Recurrent processing / higher‑order views"] },
+      { id:"intent", name:"Intentionality & Goal‑Setting", tier:"high", definition:"Forming, maintaining, and hierarchically organizing goals; aligning actions with values and context.", examples:["Setting a semester plan and weekly milestones","Choosing means that fit ends"], metaphor:"A GPS that lets you set destinations and adjust routes as conditions change.", models:["Goal hierarchies; control theory","Prefrontal valuation networks"] },
+      { id:"concept", name:"Conceptualization & Abstraction", tier:"high", definition:"Creating categories and abstract representations that generalize across instances.", examples:["Seeing ‘democracy’ across diverse systems","Forming the concept of ‘prime’ numbers"], metaphor:"Feature distillation: boiling specifics down to stable cores.", models:["Prototype/exemplar theories; schema learning","Hierarchical representation learning"] },
+      { id:"simulation", name:"Mental Simulation & Imagery", tier:"high", definition:"Running internal models of situations, objects, or actions to predict outcomes and plan.", examples:["Visualizing a chess line","Rehearsing a speech in your head"], metaphor:"A flight simulator for the mind.", models:["Forward models; motor imagery networks","Model‑based decision processes"] },
+
+      { id:"creativity", name:"Creativity", tier:"higher", definition:"Generating novel and useful ideas by flexibly recombining knowledge across domains (divergent + convergent cycles).", examples:["Inventing a new algorithmic trick","Reframing a social problem to reveal a solution"], metaphor:"A kaleidoscope: rotate the same pieces, see new patterns.", models:["Dual‑pathway models (flexibility + persistence)","Default–executive coupling in insight"] },
+      { id:"intuition", name:"Intuition", tier:"higher", definition:"Fast, experience‑shaped judgments via implicit pattern recognition and affective cues; minimal deliberation.", examples:["Seasoned nurse spotting trouble at a glance","Programmer ‘just knowing’ where the bug is"], metaphor:"A compression cache that serves up likely answers instantly.", models:["Recognition‑primed decision models","System‑1 patterning over long experience"] }
+    ];
+
+    const tierNames = {low:"Low‑level", mid:"Mid‑level", high:"High‑level", higher:"Higher‑order (subset)"};
+
+    // Build sections grouped by tier
+    const container = document.getElementById('sections');
+    const order = ['low','mid','high','higher'];
+    const groups = {low:[], mid:[], high:[], higher:[]};
+    data.forEach(d=>groups[d.tier].push(d));
+
+    function render(){
+      container.innerHTML='';
+      order.forEach(tier=>{
+        const items = groups[tier];
+        if(!items.length) return;
+        const sec = document.createElement('section');
+        sec.className='section';
+        sec.dataset.tier=tier;
+        sec.innerHTML = `<h2>${tierNames[tier]}</h2>`;
+        items.forEach(d=> sec.appendChild(makeCard(d)) );
+        container.appendChild(sec);
+      });
+      applyFilters();
+    }
+
+    function makeCard(d){
+      const card = document.createElement('article');
+      card.className='card';
+      card.dataset.id=d.id; card.dataset.tier=d.tier;
+
+      const head = document.createElement('div');
+      head.className='head'; head.setAttribute('role','button'); head.setAttribute('aria-expanded','false');
+      head.innerHTML = `<span class="badge ${d.tier}">${tierNames[d.tier].split(' ')[0]}</span><span class="name">${d.name}</span>`;
+
+      const details = document.createElement('div');
+      details.className='details';
+      details.innerHTML = `
+        <div class="row">
+          <strong>${d.name}</strong>
+          <button class="hideBtn" aria-label="Hide details">Hide</button>
+        </div>
+        <div class="grid" style="margin-top:10px">
+          <div class="cell"><h4>Definition</h4><div class="muted">${d.definition}</div></div>
+          <div class="cell"><h4>Everyday examples</h4><ul class="muted">${d.examples.map(e=>`<li>${e}</li>`).join('')}</ul></div>
+          <div class="cell"><h4>Helpful metaphor</h4><div class="muted">${d.metaphor}</div></div>
+          <div class="cell"><h4>Related models / brain systems</h4><ul class="muted">${d.models.map(m=>`<li>${m}</li>`).join('')}</ul></div>
+        </div>`;
+
+      head.addEventListener('click', ()=>toggle(card));
+      details.querySelector('.hideBtn').addEventListener('click', (e)=>{ e.stopPropagation(); collapse(card); });
+
+      card.append(head, details);
+      return card;
+    }
+
+    function toggle(card){
+      const open = card.querySelector('.details').classList.contains('open');
+      document.querySelectorAll('.details.open').forEach(d=>d.classList.remove('open'));
+      document.querySelectorAll('.head[aria-expanded="true"]').forEach(h=>h.setAttribute('aria-expanded','false'));
+      if(!open){
+        card.querySelector('.details').classList.add('open');
+        card.querySelector('.head').setAttribute('aria-expanded','true');
+        card.scrollIntoView({behavior:'smooth', block:'nearest'});
+      }
+    }
+    function collapse(card){
+      card.querySelector('.details').classList.remove('open');
+      card.querySelector('.head').setAttribute('aria-expanded','false');
+    }
+
+    // Search + filter
+    const search = document.getElementById('search');
+    search.addEventListener('input', ()=>applyFilters());
+    document.querySelectorAll('.tierToggle button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.tierToggle button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        applyFilters();
+      });
+    });
+
+    function applyFilters(){
+      const q = search.value.trim().toLowerCase();
+      const active = document.querySelector('.tierToggle button.active')?.dataset.filter || 'all';
+      document.querySelectorAll('.card').forEach(card=>{
+        const name = card.querySelector('.name').textContent.toLowerCase();
+        const matchesText = !q || name.includes(q);
+        const matchesTier = active==='all' || card.dataset.tier===active;
+        card.style.display = (matchesText && matchesTier) ? '' : 'none';
+        // collapse hidden cards
+        if(card.style.display==='none') collapse(card);
+      });
+      // Hide sections with no visible cards
+      document.querySelectorAll('.section').forEach(sec=>{
+        const visible = Array.from(sec.querySelectorAll('.card')).some(c=>c.style.display!== 'none');
+        sec.style.display = visible? '' : 'none';
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
