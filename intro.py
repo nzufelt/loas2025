@@ -9,12 +9,12 @@ Date: 2025-08-07
 """
 
 # Version 1:
-age = input("Hello! What is your age?")
+# age = input("Hello! What is your age?")
 
-if age > 25:
-    print("Your insurance premium will be $200 per month")
-else:
-    print("Your insurance premium will be $275 per month")
+# if age > 25:
+#     print("Your insurance premium will be $200 per month")
+# else:
+#     print("Your insurance premium will be $275 per month")
 
 
 
@@ -38,3 +38,33 @@ else:
 #         print("Your insurance premium will be $200 per month")
 #     else:
 #         print("Your insurance premium will be $275 per month")
+
+
+
+
+# dummy data loading function for version 3:
+def load_data():
+    return 0, 0
+from sklearn.linear_model import LogisticRegression
+
+
+
+
+
+
+
+
+
+
+# Version 3: 
+training_data, response = load_data()
+model = LogisticRegression()
+model.fit(training_data, response)
+cutoff_point = -model.intercept_[0] / model.coef_[0][0]
+
+age = input("Hello! What is your age?")
+
+if age > cutoff_point:
+    print("Your insurance premium will be $200 per month")
+else:
+    print("Your insurance premium will be $275 per month")
